@@ -20,7 +20,7 @@ import random
 import sys
 import io
 
-DATA_FILE = './mini.txt'
+DATA_FILE = './poetry_no_title.txt'
 TARGET_FILE = './result.txt'
 WEIGHTS_FILE = './weights.h5'
 
@@ -43,32 +43,32 @@ class generator:
         return np.argmax(probas)
 
 
-    def on_epoch_end(self, epoch, logs):
+    def generate_sample_result(self, epoch, logs):
         # Function invoked at end of each epoch. Prints generated text.
         print()
         print('----- Generating text after Epoch: %d' % epoch)
 
         start_index = random.randint(0, len(self.text) - self.maxlen - 1)
-        for diversity in [0.2, 1.0]:
-            generated = ''
-            sentence = self.text[start_index: start_index + self.maxlen]
-            generated += sentence
+        diversity = 0.2
+        generated = ''
+        sentence = self.text[start_index: start_index + self.maxlen]
+        generated += sentence
 
-            for i in range(400):
-                x_pred = np.zeros((1, self.maxlen, len(self.chars)))
-                for t, char in enumerate(sentence):
-                    x_pred[0, t, self.char_indices[char]] = 1.
+        for i in range(100):
+            x_pred = np.zeros((1, self.maxlen, len(self.chars)))
+            for t, char in enumerate(sentence):
+                x_pred[0, t, self.char_indices[char]] = 1.
 
-                preds = self.model.predict(x_pred, verbose=0)[0]
-                next_index = self.sample(preds, diversity)
-                next_char = self.indices_char[next_index]
+            preds = self.model.predict(x_pred, verbose=0)[0]
+            next_index = self.sample(preds, diversity)
+            next_char = self.indices_char[next_index]
 
-                generated += next_char
-                sentence = sentence[1:] + next_char
+            generated += next_char
+            sentence = sentence[1:] + next_char
 
-                self.f.write(next_char)
-                self.f.flush()
-            print()
+            self.f.write(next_char)
+            self.f.flush()
+        print()
 
     def save(self, epoch, logs):
         print("saving")
@@ -94,7 +94,7 @@ class generator:
         self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
         # cut the text in semi-redundant sequences of self.maxlen characters
-        MINI_BATCH_SIZE = 1000
+        MINI_BATCH_SIZE = 2048
         number_of_epoch = len(self.text)/MINI_BATCH_SIZE
         self.maxlen = 5
         step = 1
@@ -109,7 +109,7 @@ class generator:
           epochs=int(number_of_epoch),
           callbacks=[
           LambdaCallback(on_epoch_end=self.save), 
-          LambdaCallback(on_epoch_end=self.on_epoch_end)])
+          LambdaCallback(on_epoch_end=self.generate_sample_result)])
     
     def generate_batch(self):
         i = 0
