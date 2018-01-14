@@ -1,7 +1,4 @@
-result.txt
-result.txt
-weights.h5
-result.txt
+*.txt
 weights.h5
 poetry_no_title_data.txt
 *.txt
