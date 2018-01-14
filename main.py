@@ -10,26 +10,56 @@ has at least ~100k characters. ~1M is better.
 from __future__ import print_function
 from keras.callbacks import LambdaCallback
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM
-from keras.optimizers import RMSprop
+from keras.optimizers import Adam
 from keras.utils.data_utils import get_file
+
 
 import numpy as np
 import random
 import sys
 import io
+import preprocess_data
 
+poetry_word_per_sentence = '5'
 BIG_FILE = './poetry_no_title.txt'
-DATA_FILE = './poetry_no_title_data.txt'
-VALIDATION_FILE = './poetry_no_title_validation.txt'
+DATA_FILE = './poetry_no_title_data_' + poetry_word_per_sentence +'.txt'
+VALIDATION_FILE = './poetry_no_title_validation_' + poetry_word_per_sentence + '.txt'
 TARGET_FILE = './result.txt'
 WEIGHTS_FILE = './weights.h5'
-TRAIN_TEST_SPLIT = 0.7
 
 
 class generator:
+    def train(self):
+        self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
+        self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
+
+        # cut the text in semi-redundant sequences of self.maxlen characters
+        TRAIN_TEST_SPLIT = 0.7
+        MINI_BATCH_SIZE = 4096
+        number_of_epoch = len(self.text)/MINI_BATCH_SIZE
+        self.maxlen = 6
+        step = 1
+        sentences = []
+        next_chars = []
+
+        self.build_model()
+
+        print("training with epochs of: ", int(number_of_epoch))
+        self.model.fit_generator(self.text_2_vec_generator('data'),
+            verbose=True,
+            steps_per_epoch=MINI_BATCH_SIZE,
+            epochs=int(number_of_epoch),
+            validation_data=self.text_2_vec_generator('validation'),
+            # To give same number of batch size
+            validation_steps=MINI_BATCH_SIZE/TRAIN_TEST_SPLIT*(1-TRAIN_TEST_SPLIT),
+            callbacks=[
+              LambdaCallback(on_epoch_end=self.save), 
+              LambdaCallback(on_epoch_end=self.generate_sample_result)])
+
     def __init__(self):
+        preprocess_data.main()
         self.weight_file = WEIGHTS_FILE
         self.f = open(TARGET_FILE, 'w', encoding='utf-8')
         self.text = io.open(BIG_FILE, encoding='utf-8').read()
@@ -39,6 +69,7 @@ class generator:
 
         self.data_text = io.open(DATA_FILE, encoding='utf-8').read()
         self.validation_text = io.open(VALIDATION_FILE, encoding='utf-8').read()
+        self.log_file = open('log.txt', 'w', encoding='utf-8')
 
 
     def sample(self, preds, temperature=1.0):
@@ -53,94 +84,69 @@ class generator:
 
     def generate_sample_result(self, epoch, logs):
         # Function invoked at end of each epoch. Prints generated text.
-        self.f.write("==================Epoch {}=====================\n".format(epoch))
-        start_index = random.randint(0, len(self.text) - self.maxlen - 1)
-        diversity = 0.2
-        generated = ''
-        sentence = self.text[start_index: start_index + self.maxlen]
-        generated += sentence
+        self.f.write("\n==================Epoch {}=====================\n".format(epoch))
+        for diversity in [0.5,1.0,1.5]:
+            self.f.write("\n===============Diversity {}==================\n".format(diversity))
+            start_index = random.randint(0, len(self.text) - self.maxlen - 1)
+            generated = ''
+            sentence = self.text[start_index: start_index + self.maxlen]
+            generated += sentence
+            for i in range(100):
+                x_pred = np.zeros((1, self.maxlen, len(self.chars)))
+                for t, char in enumerate(sentence):
+                    x_pred[0, t, self.char_indices[char]] = 1.
 
-        for i in range(100):
-            x_pred = np.zeros((1, self.maxlen, len(self.chars)))
-            for t, char in enumerate(sentence):
-                x_pred[0, t, self.char_indices[char]] = 1.
+                preds = self.model.predict(x_pred, verbose=0)[0]
+                next_index = self.sample(preds, diversity)
+                next_char = self.indices_char[next_index]
 
-            preds = self.model.predict(x_pred, verbose=0)[0]
-            next_index = self.sample(preds, diversity)
-            next_char = self.indices_char[next_index]
+                generated += next_char
+                sentence = sentence[1:] + next_char
 
-            generated += next_char
-            sentence = sentence[1:] + next_char
+                self.f.write(next_char)
+                self.f.flush()
 
-            self.f.write(next_char)
-            self.f.flush()
-        print()
 
     def save(self, epoch, logs):
-        print("saving")
         self.model.save_weights(self.weight_file)
 
     def build_model(self):
         print('Build model...')
         self.model = Sequential()
-        self.model.add(LSTM(128, input_shape=(self.maxlen, len(self.chars))))
+        self.model.add(LSTM(512, return_sequences=True, input_shape=(self.maxlen, len(self.chars))))
+        self.model.add(Dropout(0.6))
+        self.model.add(LSTM(256))
+        self.model.add(Dropout(0.6))
         self.model.add(Dense(len(self.chars)))
         self.model.add(Activation('softmax'))
 
-        optimizer = RMSprop(lr=0.01)
+        optimizer = Adam()
         self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
         try:
             self.model.load_weights(self.weight_file, by_name=True)
         except Exception as e:
             print("wrong weight file size, starting with random weights")
-        
-
-    def train(self):
-        self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
-        self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
-
-        # cut the text in semi-redundant sequences of self.maxlen characters
-        MINI_BATCH_SIZE = 200
-        number_of_epoch = len(self.text)/MINI_BATCH_SIZE
-        self.maxlen = 5
-        step = 1
-        sentences = []
-        next_chars = []
-
-        self.build_model()
-
-        print("training with epochs of: ", int(number_of_epoch))
-        self.model.fit_generator(self.data_generator(),
-            steps_per_epoch=MINI_BATCH_SIZE,
-            epochs=int(number_of_epoch),
-            validation_data=self.validation_generator(),
-            # To give same number of batch size
-            validation_steps=MINI_BATCH_SIZE/TRAIN_TEST_SPLIT*(1-TRAIN_TEST_SPLIT),
-            callbacks=[
-              LambdaCallback(on_epoch_end=self.save), 
-              LambdaCallback(on_epoch_end=self.generate_sample_result)])
     
-    def data_generator(self):
+    def text_2_vec_generator(self, type):
+        f = 0
+        if type == 'data':
+            f = self.data_text
+        if type == 'validation':
+            f = self.validation_text
+        else:
+            assert('invalid type, specify data or valiation')
+
         i = 0
         while 1:
-            x = self.data_text[i: i + self.maxlen]
-            y = self.data_text[i + self.maxlen]
-
-            x_vec = np.zeros((1, self.maxlen, len(self.chars)), dtype=np.bool)
-            y_vec = np.zeros((1, len(self.chars)), dtype=bool)
-            
-            y_vec[0, self.char_indices[y]] = 1
-            for t, char in enumerate(x):
-                x_vec[0, t, self.char_indices[char]] = 1
-            yield x_vec, y_vec
-            i += 1
-
-    def validation_generator(self):
-        i = 0
-        while 1:
-            x = self.validation_text[i: i + self.maxlen]
-            y = self.validation_text[i + self.maxlen]
-
+            x = f[i: i + self.maxlen]
+            y = f[i + self.maxlen]
+            if '\n' in x or '\n' in y:
+                i += 1
+                continue
+            self.log_file.write(x)
+            self.log_file.write("==>")
+            self.log_file.write(y)
+            self.log_file.write('\n\n')
             x_vec = np.zeros((1, self.maxlen, len(self.chars)), dtype=np.bool)
             y_vec = np.zeros((1, len(self.chars)), dtype=bool)
             
