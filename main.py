@@ -23,7 +23,6 @@ import io
 DATA_FILE = './mini.txt'
 TARGET_FILE = './result.txt'
 WEIGHTS_FILE = './weights.h5'
-MINI_BATCH_SIZE = 128
 
 class generator:
     def __init__(self):
@@ -95,7 +94,8 @@ class generator:
         self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
         # cut the text in semi-redundant sequences of self.maxlen characters
-        number_of_epoch = len(self.text/MINI_BATCH_SIZE)
+        MINI_BATCH_SIZE = 1000
+        number_of_epoch = len(self.text)/MINI_BATCH_SIZE
         self.maxlen = 5
         step = 1
         sentences = []
@@ -103,10 +103,10 @@ class generator:
 
         self.build_model()
 
-        print("training with epochs of: " number_of_epoch)
+        print("training with epochs of: ", int(number_of_epoch))
         self.model.fit_generator(self.generate_batch(),
           steps_per_epoch=MINI_BATCH_SIZE,
-          epochs=number_of_epoch,
+          epochs=int(number_of_epoch),
           callbacks=[
           LambdaCallback(on_epoch_end=self.save), 
           LambdaCallback(on_epoch_end=self.on_epoch_end)])
