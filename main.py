@@ -45,9 +45,7 @@ class generator:
 
     def generate_sample_result(self, epoch, logs):
         # Function invoked at end of each epoch. Prints generated text.
-        print()
-        print('----- Generating text after Epoch: %d' % epoch)
-
+        self.f.write("==================Epoch {}=====================\n".format(epoch))
         start_index = random.randint(0, len(self.text) - self.maxlen - 1)
         diversity = 0.2
         generated = ''
