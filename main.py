@@ -103,6 +103,7 @@ class generator:
 
         self.build_model()
 
+        print("training with epochs of: " number_of_epoch)
         self.model.fit_generator(self.generate_batch(),
           steps_per_epoch=MINI_BATCH_SIZE,
           epochs=number_of_epoch,
