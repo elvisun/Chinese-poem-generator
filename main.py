@@ -1,12 +1,3 @@
-'''Example script to generate text from Nietzsche's writings.
-At least 20 epochs are required before the generated text
-starts sounding coherent.
-It is recommended to run this script on GPU, as recurrent
-networks are quite computationally intensive.
-If you try this script on new data, make sure your corpus
-has at least ~100k characters. ~1M is better.
-'''
-
 from __future__ import print_function
 from keras.callbacks import LambdaCallback
 from keras.models import Sequential
@@ -71,9 +62,8 @@ class generator:
         self.validation_text = io.open(VALIDATION_FILE, encoding='utf-8').read()
         self.log_file = open('log.txt', 'w', encoding='utf-8')
 
-
+    # helper function to sample an index from a probability array
     def sample(self, preds, temperature=1.0):
-        # helper function to sample an index from a probability array
         preds = np.asarray(preds).astype('float64')
         preds = np.log(preds) / temperature
         exp_preds = np.exp(preds)
@@ -81,9 +71,8 @@ class generator:
         probas = np.random.multinomial(1, preds, 1)
         return np.argmax(probas)
 
-
+    # Function invoked at end of each epoch. Prints generated text.
     def generate_sample_result(self, epoch, logs):
-        # Function invoked at end of each epoch. Prints generated text.
         self.f.write("\n\n\n\n==================Epoch {}=====================\n".format(epoch))
         for diversity in [0.5,1.0,1.5]:
             self.f.write("\n\n------------Diversity {}--------------\n".format(diversity))
@@ -122,10 +111,11 @@ class generator:
 
         optimizer = Adam()
         self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-        # try:
-        #     self.model.load_weights(self.weight_file, by_name=True)
-        # except Exception as e:
-        #     print("wrong weight file size, starting with random weights")
+        try:
+            self.model.load_weights('stablized_weights.h5', by_name=True)
+            print("Loading model")
+        except Exception as e:
+            print("wrong weight file size, starting with random weights")
     
     def text_2_vec_generator(self, type):
         f = 0
@@ -140,6 +130,7 @@ class generator:
         while 1:
             x = f[i: i + self.maxlen]
             y = f[i + self.maxlen]
+            #Make sure all data are from one poem
             if '\n' in x or '\n' in y:
                 i += 1
                 continue
