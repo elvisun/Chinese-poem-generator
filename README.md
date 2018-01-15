@@ -2,6 +2,20 @@
 Chinese poem generator with LSTM network
 
 # Results
+## Findings
+The first few epochs started with random(very rare) charaters, with no or random punctuations. 
+It figured out how to add punctuations into sentences after 5 epochs- one comma and one period. 
+
+After around 30 epochs the charaters used start to have a theme.
+
+Adding dropout layer helped improve the issue of overfitting - because punctuations were so frequent comparing to other charaters, it was just generating lines of punctuations with no other contents. 
+
+## Future Works
+Add acrostic poem（藏头诗）feature
+Does it start to rhyme at some point?
+Try GAN network. 
+
+## Output 
 ==================Epoch 0=====================
 
 
