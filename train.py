@@ -21,12 +21,16 @@ TARGET_FILE = './result.txt'
 WEIGHTS_FILE = './weights.h5'
 
 
-class Generator:
+class generator:
     def train(self):
+        self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
+        self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
+
         # cut the text in semi-redundant sequences of self.maxlen characters
         TRAIN_TEST_SPLIT = 0.7
         MINI_BATCH_SIZE = 1024
         number_of_epoch = len(self.text)/MINI_BATCH_SIZE
+        self.maxlen = 6
         step = 1
         sentences = []
         next_chars = []
@@ -42,27 +46,21 @@ class Generator:
             # To give same number of batch size
             validation_steps=MINI_BATCH_SIZE/TRAIN_TEST_SPLIT*(1-TRAIN_TEST_SPLIT),
             callbacks=[
-              #LambdaCallback(on_epoch_end=self.save), 
+              LambdaCallback(on_epoch_end=self.save), 
               LambdaCallback(on_epoch_end=self.generate_sample_result)])
 
     def __init__(self):
-        self.maxlen = 6
-
         preprocess_data.main()
         self.weight_file = WEIGHTS_FILE
         self.f = open(TARGET_FILE, 'w', encoding='utf-8')
-
         self.text = io.open(BIG_FILE, encoding='utf-8').read()
         print('corpus length:', len(self.text))
         self.chars = sorted(list(set(self.text)))
         print('char space size:', len(self.chars))
-        self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
-        self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
         self.data_text = io.open(DATA_FILE, encoding='utf-8').read()
         self.validation_text = io.open(VALIDATION_FILE, encoding='utf-8').read()
         self.log_file = open('log.txt', 'w', encoding='utf-8')
-
 
     # helper function to sample an index from a probability array
     def sample(self, preds, temperature=1.0):
@@ -97,31 +95,6 @@ class Generator:
                 self.f.write(next_char)
                 self.f.flush()
 
-    def predict(self, input_chars, diversity = 1.5):
-        # Read a random line and get the last few char without the new line char
-        line = self.get_random_line()
-        seed = line[-(self.maxlen):-1]   
-
-        res = ''
-        # Add a buffer string that will be removed in the loop
-        seed = 'c' + seed
-        # Make one sentence per input_chars, and add next char to next setence
-        for c in input_chars:
-            seed = seed[1:] + c
-            for j in range(5):
-                x_pred = np.zeros((1, self.maxlen, len(self.chars)))
-                for t, char in enumerate(seed):
-                    x_pred[0, t, self.char_indices[char]] = 1.
-
-                preds = self.model.predict(x_pred, verbose=0)[0]
-                next_index = self.sample(preds, diversity)
-                next_char = self.indices_char[next_index]
-                seed = seed[1:] + next_char
-            res += seed
-        return res
-
-
-
 
     def save(self, epoch, logs):
         self.model.save_weights(self.weight_file)
@@ -139,7 +112,7 @@ class Generator:
         optimizer = Adam()
         self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
         try:
-            self.model.load_weights('weights.h5', by_name=True)
+            self.model.load_weights('stablized_weights.h5', by_name=True)
             print("Loading model")
         except Exception as e:
             print("wrong weight file size, starting with random weights")
@@ -157,7 +130,7 @@ class Generator:
         while 1:
             x = f[i: i + self.maxlen]
             y = f[i + self.maxlen]
-            # Make sure all data are from one poem/line
+            #Make sure all data are from one poem
             if '\n' in x or '\n' in y:
                 i += 1
                 continue
@@ -174,14 +147,8 @@ class Generator:
             yield x_vec, y_vec
             i += 1
 
-    def get_random_line(self):
-        t = io.open(BIG_FILE, encoding='utf-8').readlines()
-        size = len(t)
-        return t[random.randrange(0, size)]
-        
-
 def main():
-    g = Generator()
+    g = generator()
     g.train()
 
 
