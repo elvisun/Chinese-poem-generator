@@ -37,7 +37,7 @@ class generator:
 
         # cut the text in semi-redundant sequences of self.maxlen characters
         TRAIN_TEST_SPLIT = 0.7
-        MINI_BATCH_SIZE = 4096
+        MINI_BATCH_SIZE = 1024
         number_of_epoch = len(self.text)/MINI_BATCH_SIZE
         self.maxlen = 6
         step = 1
@@ -84,9 +84,9 @@ class generator:
 
     def generate_sample_result(self, epoch, logs):
         # Function invoked at end of each epoch. Prints generated text.
-        self.f.write("\n==================Epoch {}=====================\n".format(epoch))
+        self.f.write("\n\n\n\n==================Epoch {}=====================\n".format(epoch))
         for diversity in [0.5,1.0,1.5]:
-            self.f.write("\n===============Diversity {}==================\n".format(diversity))
+            self.f.write("\n\n------------Diversity {}--------------\n".format(diversity))
             start_index = random.randint(0, len(self.text) - self.maxlen - 1)
             generated = ''
             sentence = self.text[start_index: start_index + self.maxlen]
@@ -122,16 +122,16 @@ class generator:
 
         optimizer = Adam()
         self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-        try:
-            self.model.load_weights(self.weight_file, by_name=True)
-        except Exception as e:
-            print("wrong weight file size, starting with random weights")
+        # try:
+        #     self.model.load_weights(self.weight_file, by_name=True)
+        # except Exception as e:
+        #     print("wrong weight file size, starting with random weights")
     
     def text_2_vec_generator(self, type):
         f = 0
         if type == 'data':
             f = self.data_text
-        if type == 'validation':
+        elif type == 'validation':
             f = self.validation_text
         else:
             assert('invalid type, specify data or valiation')
