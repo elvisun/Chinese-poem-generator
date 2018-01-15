@@ -3,7 +3,7 @@ Chinese poem generator with LSTM network
 
 # Results
 
-> trained on one GTX1080 for 12 hours. Went through 35% of the data and both loss and validation loss settled. [See full training output here ](./result.md)
+Trained on one GTX1080 for 12 hours. Went through 35% of the data and both loss and validation loss settled. [See full training output here ](./result.md)
 
 ## Findings
 The first few epochs started with random(very rare) charaters, with no or random punctuations. 
