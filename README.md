@@ -1,7 +1,6 @@
 # Chinese-poem-generator
 Chinese poem generator with LSTM network
 
-# Results
 ## Findings
 The first few epochs started with random(very rare) charaters, with no or random punctuations. 
 It figured out how to add punctuations into sentences after 5 epochs- one comma and one period. 
