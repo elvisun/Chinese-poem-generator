@@ -4,7 +4,7 @@ from main import Generator
 def main():
     f = open('./output.txt', 'w', encoding='utf-8')
 
-    input_char = '潘邦来风'
+    input_char = '卢本伟挂逼凉凉送给你'
     model = Generator()
     model.build_model()
 
