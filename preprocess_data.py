@@ -20,14 +20,13 @@ def write_to_files(data, train_file, test_file, train_test_split):
 
 def main():
     split_ratio = 0.7
-    dataFile_5_jueju = './poetry_no_title_data_5_jueju.txt'
-    dataFile_5_lueshi = './poetry_no_title_data_5_lueshi.txt'
-    validationFile_5_jueju = './poetry_no_title_validation_5_jueju.txt'
-    validationFile_5_lueshi = './poetry_no_title_validation_5_lueshi.txt'
-    dataFile_7_jueju = './poetry_no_title_data_7_jueju.txt'
-    dataFile_7_lueshi = './poetry_no_title_data_7_lueshi.txt'
-    validationFile_7_jueju = './poetry_no_title_validation_7_jueju.txt'
-    validationFile_7_lueshi = './poetry_no_title_validation_7_lueshi.txt'
+    poetry_types = [
+        'jueju_5',
+        'jueju_7',
+        'lvshi_5',
+        'lvshi_7',
+        'others'
+    ]
 
     f = open('./poetry.txt', encoding='utf-8')
     tmp = []
@@ -39,12 +38,8 @@ def main():
         tmp.append(newLine)
 
     shuffle(tmp)
-    clean_data_5_jueju = []
-    clean_data_5_lueshi = []
-    clean_data_7_jueju = []
-    clean_data_7_lueshi = []
-    clean_data_others = []
     count_map = {}
+    data_set = {}
     # check if number of words in each sentence is the same
     for i, line in enumerate(tmp):
         chunks = split_line(line.strip())
@@ -65,29 +60,19 @@ def main():
             count_map[len(chunks[0])] = 1
 
         if len(chunks[0]) == 5 and len(chunks) == 4:
-            clean_data_5_jueju.append(line)
+            data_set.setdefault("jueju_5", []).append(line)
         elif len(chunks[0]) == 5 and len(chunks) == 8:
-            clean_data_5_lueshi.append(line)
+            data_set.setdefault("lvshi_5", []).append(line)
         elif len(chunks[0]) == 7 and len(chunks) == 4:
-            clean_data_7_jueju.append(line)
+            data_set.setdefault("jueju_7", []).append(line)
         elif len(chunks[0]) == 7 and len(chunks) == 8:
-            clean_data_7_lueshi.append(line)
+            data_set.setdefault("lvshi_7", []).append(line)
         else:
-            clean_data_others.append(line)
+            data_set.setdefault("others", []).append(line)
 
-    print(count_map)
-    # print(len(clean_data_5))
-    print(len(clean_data_others))
-
-    write_to_files(clean_data_5_jueju, dataFile_5_jueju,
-                   validationFile_5_jueju, split_ratio)
-    write_to_files(clean_data_7_jueju, dataFile_7_jueju,
-                   validationFile_7_jueju, split_ratio)
-    write_to_files(clean_data_5_lueshi, dataFile_5_lueshi,
-                   validationFile_5_lueshi, split_ratio)
-    write_to_files(clean_data_7_lueshi, dataFile_7_lueshi,
-                   validationFile_7_lueshi, split_ratio)
-    #write_to_files(clean_data_others, dataFile_7, validationFile_7,split_ratio)
+    for t in poetry_types:
+        write_to_files(data_set.get(t, []), 'poetry_no_title_data_' + t +
+                       '.txt', 'poetry_no_title_validation_' + t + '.txt', split_ratio)
 
 if __name__ == '__main__':
     main()
