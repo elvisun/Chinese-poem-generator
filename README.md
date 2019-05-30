@@ -14,8 +14,8 @@ After around 30 epochs the charaters used start to have a theme.
 Adding dropout layer helped improve the issue of overfitting - because punctuations were so frequent comparing to other charaters, it was just generating lines of punctuations with no other contents. 
 
 ## Future Works
-Add acrostic poem（藏头诗）feature
 Does it start to rhyme at some point?
+Group training data into catagories (5 words, 7 words, etc...)
 Try GAN network. 
 
 ## Sample Acrostic Poem with different diversity level
